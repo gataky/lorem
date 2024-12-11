@@ -26,31 +26,30 @@ func main() {
 	lorem := NewLorem()
 	lorem.RegisterProvider("custom", custom)
 
-	// test := "foo"
+	test := 10
+	var pi *int = &test
+	lorem.Fake(pi)
+	fmt.Println(*pi)
 
-	// var pi *int = &test
-	// lorem.Fake(pi)
-	// fmt.Println(*pi)
+	var i int
+	lorem.Fake(&i)
+	fmt.Println(i)
 
-	// var i int
-	// lorem.Fake(&i)
-	// fmt.Println(i)
-	//
-	// m := map[string]Int{}
-	// lorem.Fake(&m)
-	// fmt.Println(m)
-	//
-	// ss := []string{}
-	// lorem.Fake(&ss)
-	// fmt.Println(ss)
-	//
-	// sn := []Int{}
-	// lorem.Fake(&sn)
-	// fmt.Println(sn)
-	//
-	// a := [2]Int{}
-	// lorem.Fake(&a)
-	// fmt.Println(a)
+	m := map[string]Int{}
+	lorem.Fake(&m)
+	fmt.Println(m)
+
+	ss := []string{}
+	lorem.Fake(&ss)
+	fmt.Println(ss)
+
+	sn := []Int{}
+	lorem.Fake(&sn)
+	fmt.Println(sn)
+
+	a := [2]Int{}
+	lorem.Fake(&a)
+	fmt.Println(a)
 
 	st := S{}
 	lorem.Fake(&st)
@@ -58,8 +57,8 @@ func main() {
 	fmt.Println(*st.Pointer)
 }
 
-func custom(rand *rand.Rand) reflect.Value {
-	return reflect.ValueOf("foo")
+func custom(rand *rand.Rand) any {
+	return "foo"
 }
 
 const (
@@ -84,7 +83,7 @@ type Lorem struct {
 	mapLen   int
 }
 
-type Provider func(*rand.Rand) reflect.Value
+type Provider func(*rand.Rand) any
 
 func NewLorem() *Lorem {
 	seed := time.Now().UnixNano()
@@ -166,7 +165,8 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		fallthrough
 
 	case reflect.String:
-		return l.primitives[kind](l.rand), nil
+		value := l.primitives[kind](l.rand)
+		return reflect.ValueOf(value), nil
 
 	case reflect.Pointer:
 
@@ -252,7 +252,7 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 			)
 
 			if f, ok := l.providers[tag]; ok {
-				value = f(l.rand)
+				value = reflect.ValueOf(f(l.rand))
 			} else {
 				value, err = l.fakeIt(field)
 			}
