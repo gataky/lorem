@@ -24,6 +24,7 @@ type S struct {
 	Int       int8
 	Float     float32
 	Map       map[Number3]int
+	MapMap    map[string]map[string]string
 	Slice     []string
 	SubStruct SubStruct
 	Func      func() `lorem:"providerFunc"`
@@ -47,7 +48,7 @@ func main() {
 		// Seed so we can have reproducible generations.
 		Seed:     1,
 		SliceLen: 10, // The len of slices
-		MapLen:   5,  // the len of maps
+		MapLen:   3,  // the len of maps
 	}
 	lorem := NewLorem(o)
 
