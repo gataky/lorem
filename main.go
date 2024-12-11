@@ -4,20 +4,28 @@ import (
 	"fmt"
 	"math/rand"
 	"reflect"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 )
 
 type Int int
 
+type SS struct {
+	String string
+}
+
 type S struct {
-	Pointer *Int
-	String  string
-	Map     map[Int]Int
+	Pointer *Int        `lorem:"Int,pointer"`
+	String  string      `lorem:"custom"`
+	Map     map[Int]Int `lorem:"map"`
+	S       SS
 }
 
 func main() {
 	lorem := NewLorem()
+	lorem.RegisterProvider("custom", custom)
+
 	// test := "foo"
 
 	// var pi *int = &test
@@ -50,22 +58,38 @@ func main() {
 	fmt.Println(*st.Pointer)
 }
 
-type Lorem struct {
-	seed      int64
-	rand      *rand.Rand
-	providers map[reflect.Kind]Provider
-	count     int
+func custom(rand *rand.Rand) reflect.Value {
+	return reflect.ValueOf("foo")
 }
 
-type Kind uint
+const (
+	TAG = "lorem"
+)
+
+type Options struct {
+	Seed     int64
+	SliceLen int
+	ArrayLen int
+	MapLen   int
+}
+
+type Lorem struct {
+	seed       int64
+	rand       *rand.Rand
+	primitives map[reflect.Kind]Provider
+	providers  map[string]Provider
+
+	sliceLen int
+	arrayLen int
+	mapLen   int
+}
 
 type Provider func(*rand.Rand) reflect.Value
 
 func NewLorem() *Lorem {
-	// seed := time.Now().UnixNano()
-	seed := int64(1)
+	seed := time.Now().UnixNano()
 
-	providers := map[reflect.Kind]Provider{
+	primitives := map[reflect.Kind]Provider{
 		reflect.Bool:       providerBool,
 		reflect.Int:        providerInt,
 		reflect.Int8:       providerInt,
@@ -84,12 +108,22 @@ func NewLorem() *Lorem {
 		reflect.String:     providerString,
 	}
 
+	providers := map[string]Provider{}
+
 	return &Lorem{
-		seed:      seed,
-		rand:      rand.New(rand.NewSource(seed)),
-		providers: providers,
-		count:     0,
+		seed:       seed,
+		rand:       rand.New(rand.NewSource(seed)),
+		primitives: primitives,
+		providers:  providers,
+
+		sliceLen: 3,
+		arrayLen: 3,
+		mapLen:   3,
 	}
+}
+
+func (l Lorem) RegisterProvider(tag string, provider Provider) {
+	l.providers[tag] = provider
 }
 
 func (l Lorem) Fake(source any) error {
@@ -113,6 +147,8 @@ func (l Lorem) Fake(source any) error {
 }
 
 func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
+
+	elementType := element.Type()
 	switch kind := element.Kind(); kind {
 	case reflect.Bool:
 		fallthrough
@@ -130,7 +166,7 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		fallthrough
 
 	case reflect.String:
-		return l.providers[kind](l.rand), nil
+		return l.primitives[kind](l.rand), nil
 
 	case reflect.Pointer:
 
@@ -146,10 +182,8 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		return pointer, nil
 
 	case reflect.Map:
-		elementType := element.Type()
 		newMap := reflect.MakeMap(elementType)
-		// TODO: configure length
-		for i := 0; i < 2; i++ {
+		for i := 0; i < l.mapLen; i++ {
 
 			key, err := l.fakeIt(reflect.New(elementType.Key()).Elem())
 			if err != nil {
@@ -172,12 +206,10 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		return newMap, nil
 
 	case reflect.Slice:
-		elementType := element.Type()
-		newSlice := reflect.MakeSlice(elementType, 2, 2)
+		newSlice := reflect.MakeSlice(elementType, l.sliceLen, l.sliceLen)
 		itemType := newSlice.Index(0).Type()
 
-		// TODO: configure length
-		for i := 0; i < 2; i++ {
+		for i := 0; i < l.sliceLen; i++ {
 			value, err := l.fakeIt(newSlice.Index(i))
 			if err != nil {
 				return reflect.Value{}, err
@@ -189,11 +221,10 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		return newSlice, nil
 
 	case reflect.Array:
-		elementType := element.Type()
 		newArray := reflect.New(elementType).Elem()
 		itemType := newArray.Index(0).Type()
 
-		for i := 0; i < 2; i++ {
+		for i := 0; i < l.arrayLen; i++ {
 			value, err := l.fakeIt(newArray.Index(i))
 			if err != nil {
 				return reflect.Value{}, err
@@ -206,7 +237,6 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		return newArray, nil
 
 	case reflect.Struct:
-		elementType := element.Type()
 		newStruct := reflect.New(elementType).Elem()
 
 		for i := 0; i < newStruct.NumField(); i++ {
@@ -215,14 +245,24 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 				continue
 			}
 
-			value, err := l.fakeIt(field)
+			tag := elementType.Field(i).Tag.Get(TAG)
+			var (
+				err   error
+				value reflect.Value
+			)
+
+			if f, ok := l.providers[tag]; ok {
+				value = f(l.rand)
+			} else {
+				value, err = l.fakeIt(field)
+			}
+
 			if err != nil {
 				return reflect.Value{}, err
 			} else if reflect.ValueOf(value).IsZero() {
 				continue
 			}
 
-			fmt.Println("unpacked value", value)
 			field.Set(value.Convert(field.Type()))
 		}
 		return newStruct, nil
