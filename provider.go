@@ -4,6 +4,8 @@ import (
 	"math/rand"
 )
 
+type Provider func(*rand.Rand) any
+
 func providerInt(rand *rand.Rand) any {
 	return rand.Int()
 }
