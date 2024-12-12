@@ -21,11 +21,11 @@ type S struct {
 	Pointer   *int
 	Custom    Number
 	String    string
-	Int       int8
+	Int       int8 `lorem:"-"`
 	Float     float32
 	Map       map[Number3]int
 	MapMap    map[string]map[string]string
-	Slice     []string
+	Slice     []any `lorem:"fake"`
 	SubStruct SubStruct
 	Func      func() `lorem:"providerFunc"`
 }
@@ -42,6 +42,15 @@ func providerFunc(rand *rand.Rand) any {
 	return fake
 }
 
+func test(rand *rand.Rand) any {
+
+	a := String(rand).(string)
+	b := String(rand).(string)
+	c := Int8(rand).(int8)
+
+	return []any{a, b, c}
+}
+
 func main() {
 	// Some options to control the generated types
 	o := Options{
@@ -54,37 +63,38 @@ func main() {
 
 	// Register the providers for the tags specified on the struct.
 	lorem.RegisterProvider("providerFunc", providerFunc)
+	lorem.RegisterProvider("fake", test)
 
-	test := 10
-	var pi *int = &test
-	lorem.Fake(pi)
-	spew.Dump(pi)
-	fmt.Println("=============================")
-
-	var i int
-	lorem.Fake(&i)
-	spew.Dump(i)
-	fmt.Println("=============================")
-
-	m := map[string]Number{}
-	lorem.Fake(&m)
-	spew.Dump(m)
-	fmt.Println("=============================")
-
-	sn := []Number3{}
-	lorem.Fake(&sn)
-	spew.Dump(sn)
-	fmt.Println("=============================")
-
-	a := [2]int{}
-	lorem.Fake(&a)
-	spew.Dump(a)
-	fmt.Println("=============================")
-
+	// test := 10
+	// var pi *int = &test
+	// lorem.Fake(pi)
+	// spew.Dump(pi)
+	// fmt.Println("=============================")
+	//
+	// var i int
+	// lorem.Fake(&i)
+	// spew.Dump(i)
+	// fmt.Println("=============================")
+	//
+	// m := map[string]Number{}
+	// lorem.Fake(&m)
+	// spew.Dump(m)
+	// fmt.Println("=============================")
+	//
+	// sn := []Number3{}
+	// lorem.Fake(&sn)
+	// spew.Dump(sn)
+	// fmt.Println("=============================")
+	//
+	// a := [2]int{}
+	// lorem.Fake(&a)
+	// spew.Dump(a)
+	// fmt.Println("=============================")
+	//
 	st := S{}
 	lorem.Fake(&st)
 	spew.Dump(st)
 	fmt.Println("=============================")
 
-	st.Func()
+	// st.Func()
 }

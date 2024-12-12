@@ -213,7 +213,9 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 				value reflect.Value
 			)
 
-			if provider, ok := l.providers[tag]; ok {
+			if tag == "-" {
+				continue
+			} else if provider, ok := l.providers[tag]; ok {
 				value = reflect.ValueOf(provider(l.rand))
 			} else {
 				value, err = l.fakeIt(field)
