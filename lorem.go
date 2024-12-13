@@ -253,9 +253,13 @@ func (l *Lorem) _struct(element reflect.Value) (reflect.Value, error) {
 		// that gets sorted out.
 		if tag == "-" {
 			continue
+			// provider order of precedence
+			// 1. user defined providers
+			// 2. categorie providers
+			// 3. primitive providers
 		} else if provider, ok := l.providers[tag]; ok {
 			value = reflect.ValueOf(provider(l.rand))
-		} else if provider, ok := categories[tag]; ok {
+		} else if provider, ok := l.categories[tag]; ok {
 			value = reflect.ValueOf(provider(l.rand))
 		} else {
 			value, err = l.fakeIt(field)
