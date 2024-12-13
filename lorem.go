@@ -27,6 +27,7 @@ type Lorem struct {
 	seed       int64
 	rand       *rand.Rand
 	primitives map[reflect.Kind]Provider
+	categories map[string]Provider
 	providers  map[string]Provider
 
 	sliceLen int
@@ -53,6 +54,12 @@ var primitives = map[reflect.Kind]Provider{
 	reflect.Complex128: Complex128,
 }
 
+var categories = map[string]Provider{
+	"MaleName":   MaleName,
+	"LastName":   LastName,
+	"FemaleName": FemaleName,
+}
+
 func NewLorem(opts ...Options) *Lorem {
 	var options Options
 	if len(opts) > 0 {
@@ -63,6 +70,7 @@ func NewLorem(opts ...Options) *Lorem {
 		seed:       options.Seed,
 		rand:       rand.New(rand.NewSource(options.Seed)),
 		primitives: primitives,
+		categories: categories,
 		providers:  make(map[string]Provider),
 		sliceLen:   options.SliceLen,
 		mapLen:     options.MapLen,
@@ -246,6 +254,8 @@ func (l *Lorem) _struct(element reflect.Value) (reflect.Value, error) {
 		if tag == "-" {
 			continue
 		} else if provider, ok := l.providers[tag]; ok {
+			value = reflect.ValueOf(provider(l.rand))
+		} else if provider, ok := categories[tag]; ok {
 			value = reflect.ValueOf(provider(l.rand))
 		} else {
 			value, err = l.fakeIt(field)

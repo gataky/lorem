@@ -22,7 +22,7 @@ type SubStruct struct {
 type S struct {
 	Pointer *int
 	Custom  Number
-	String  string
+	String  string `lorem:"LastName"`
 	Int     int8
 	// To ignore a field add a "-" tag
 	IgnoreField int8 `lorem:"-"`
@@ -37,6 +37,8 @@ type S struct {
 // Example of using a custom provider to generate data for you. Useful if you
 // have an interface value or slices to interfaces.
 func myFakeSliceProvider(rand *rand.Rand) any {
+	// you don't have to use lorem's providers here but they're available
+	// to you is you want.
 	a := lorem.String(rand).(string)
 	b := lorem.String(rand).(string)
 	c := lorem.Int8(rand).(int8)
@@ -77,4 +79,6 @@ func Test_Example(t *testing.T) {
 
 	// The func will return the function that we used from our custom method.
 	st.Func() // -> "hi from the fake func"
+
+	t.Fail()
 }
