@@ -1,4 +1,4 @@
-package main
+package lorem
 
 import (
 	"fmt"
@@ -104,7 +104,6 @@ func (l Lorem) Fake(source any) error {
 }
 
 func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
-	elementType := element.Type()
 	switch kind := element.Kind(); kind {
 
 	// primitive cases are the types that can't be broken down anymore.
@@ -127,114 +126,140 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		value := l.primitives[kind](l.rand)
 		return reflect.ValueOf(value), nil
 
-		// collections cases are the types that are collections of types and will
-		// be recursed to the primitive case.
+		// collection cases get recursed into until the reach the primitive case.
 	case reflect.Pointer:
-		// subItem is the type the value points to i.e. if the pointer is a
-		// *string then the subItem would be a string
-		subItem := reflect.Zero(element.Type().Elem())
-		pointer := reflect.New(subItem.Type())
-
-		value, err := l.fakeIt(subItem)
-		if err != nil {
-			return reflect.Value{}, err
-		}
-
-		pointer.Elem().Set(value.Convert(subItem.Type()))
-		return pointer, nil
+		return l._pointer(element)
 
 	case reflect.Map:
-		newMap := reflect.MakeMap(elementType)
-		for i := 0; i < l.mapLen; i++ {
-
-			key, err := l.fakeIt(reflect.New(elementType.Key()).Elem())
-			if err != nil {
-				return reflect.Value{}, err
-			} else if reflect.ValueOf(key).IsZero() {
-				continue
-			}
-			key = key.Convert(elementType.Key())
-
-			value, err := l.fakeIt(reflect.New(elementType.Elem()).Elem())
-			if err != nil {
-				return reflect.Value{}, err
-			} else if reflect.ValueOf(value).IsZero() {
-				continue
-			}
-			value = value.Convert(elementType.Elem())
-
-			newMap.SetMapIndex(key, value)
-		}
-		return newMap, nil
+		return l._map(element)
 
 	case reflect.Slice:
-		newSlice := reflect.MakeSlice(elementType, l.sliceLen, l.sliceLen)
-		itemType := newSlice.Index(0).Type()
-
-		for i := 0; i < l.sliceLen; i++ {
-			value, err := l.fakeIt(newSlice.Index(i))
-			if err != nil {
-				return reflect.Value{}, err
-			} else if reflect.ValueOf(value).IsZero() {
-				continue
-			}
-			newSlice.Index(i).Set(value.Convert(itemType))
-		}
-		return newSlice, nil
+		return l._slice(element)
 
 	case reflect.Array:
-		newArray := reflect.New(elementType).Elem()
-		itemType := newArray.Index(0).Type()
-
-		for i := 0; i < newArray.Len(); i++ {
-			value, err := l.fakeIt(newArray.Index(i))
-			if err != nil {
-				return reflect.Value{}, err
-			} else if reflect.ValueOf(value).IsZero() {
-				continue
-			}
-
-			newArray.Index(i).Set(value.Convert(itemType))
-		}
-		return newArray, nil
+		return l._array(element)
 
 	case reflect.Struct:
-		newStruct := reflect.New(elementType).Elem()
-
-		for i := 0; i < newStruct.NumField(); i++ {
-			field := newStruct.Field(i)
-			if !field.CanSet() {
-				continue
-			}
-
-			tag := elementType.Field(i).Tag.Get(TAG)
-			var (
-				err   error
-				value reflect.Value
-			)
-
-			if tag == "-" {
-				continue
-			} else if provider, ok := l.providers[tag]; ok {
-				value = reflect.ValueOf(provider(l.rand))
-			} else {
-				value, err = l.fakeIt(field)
-			}
-
-			if err != nil {
-				return reflect.Value{}, err
-			} else if reflect.ValueOf(value).IsZero() {
-				continue
-			}
-
-			field.Set(value.Convert(field.Type()))
-		}
-		return newStruct, nil
+		return l._struct(element)
 
 	default:
 		return reflect.Value{}, fmt.Errorf("unsupported field kind: %s", kind)
 
 	}
+}
+
+func (l *Lorem) _pointer(element reflect.Value) (reflect.Value, error) {
+	elementType := element.Type()
+	// subItem is the type the value points to i.e. if the pointer is a
+	// *string then the subItem would be a string
+	subItem := reflect.Zero(elementType.Elem())
+	pointer := reflect.New(subItem.Type())
+
+	value, err := l.fakeIt(subItem)
+	if err != nil {
+		return reflect.Value{}, err
+	}
+
+	pointer.Elem().Set(value.Convert(subItem.Type()))
+	return pointer, nil
+}
+
+func (l *Lorem) _map(element reflect.Value) (reflect.Value, error) {
+	elementType := element.Type()
+	newMap := reflect.MakeMap(elementType)
+	for i := 0; i < l.mapLen; i++ {
+
+		key, err := l.fakeIt(reflect.New(elementType.Key()).Elem())
+		if err != nil {
+			return reflect.Value{}, err
+		} else if reflect.ValueOf(key).IsZero() {
+			continue
+		}
+		key = key.Convert(elementType.Key())
+
+		value, err := l.fakeIt(reflect.New(elementType.Elem()).Elem())
+		if err != nil {
+			return reflect.Value{}, err
+		} else if reflect.ValueOf(value).IsZero() {
+			continue
+		}
+		value = value.Convert(elementType.Elem())
+
+		newMap.SetMapIndex(key, value)
+	}
+	return newMap, nil
+}
+
+func (l *Lorem) _slice(element reflect.Value) (reflect.Value, error) {
+	elementType := element.Type()
+	newSlice := reflect.MakeSlice(elementType, l.sliceLen, l.sliceLen)
+	itemType := newSlice.Index(0).Type()
+
+	for i := 0; i < l.sliceLen; i++ {
+		value, err := l.fakeIt(newSlice.Index(i))
+		if err != nil {
+			return reflect.Value{}, err
+		} else if reflect.ValueOf(value).IsZero() {
+			continue
+		}
+		newSlice.Index(i).Set(value.Convert(itemType))
+	}
+	return newSlice, nil
+}
+
+func (l *Lorem) _array(element reflect.Value) (reflect.Value, error) {
+	elementType := element.Type()
+	newArray := reflect.New(elementType).Elem()
+	itemType := newArray.Index(0).Type()
+
+	for i := 0; i < newArray.Len(); i++ {
+		value, err := l.fakeIt(newArray.Index(i))
+		if err != nil {
+			return reflect.Value{}, err
+		} else if reflect.ValueOf(value).IsZero() {
+			continue
+		}
+
+		newArray.Index(i).Set(value.Convert(itemType))
+	}
+	return newArray, nil
+}
+
+func (l *Lorem) _struct(element reflect.Value) (reflect.Value, error) {
+	elementType := element.Type()
+	newStruct := reflect.New(elementType).Elem()
+
+	for i := 0; i < newStruct.NumField(); i++ {
+		field := newStruct.Field(i)
+		if !field.CanSet() {
+			continue
+		}
+
+		tag := elementType.Field(i).Tag.Get(TAG)
+		var (
+			err   error
+			value reflect.Value
+		)
+
+		// ignore fields that have a "-" tag.  Useful for interfaces until
+		// that gets sorted out.
+		if tag == "-" {
+			continue
+		} else if provider, ok := l.providers[tag]; ok {
+			value = reflect.ValueOf(provider(l.rand))
+		} else {
+			value, err = l.fakeIt(field)
+		}
+
+		if err != nil {
+			return reflect.Value{}, err
+		} else if reflect.ValueOf(value).IsZero() {
+			continue
+		}
+
+		field.Set(value.Convert(field.Type()))
+	}
+	return newStruct, nil
 }
 
 func inspect(v reflect.Value) {
