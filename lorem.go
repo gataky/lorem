@@ -7,10 +7,6 @@ import (
 	"time"
 )
 
-const (
-	TAG = "lorem"
-)
-
 type Options struct {
 	Seed     int64
 	SliceLen int
@@ -26,7 +22,7 @@ var defaultOptions = Options{
 type Lorem struct {
 	seed       int64
 	rand       *rand.Rand
-	primitives map[reflect.Kind]Provider
+	primitives map[LoremType]Provider
 	categories map[string]Provider
 	providers  map[string]Provider
 
@@ -35,32 +31,7 @@ type Lorem struct {
 	mapLen   int
 }
 
-var primitives = map[reflect.Kind]Provider{
-	reflect.Bool:       Bool,
-	reflect.String:     String,
-	reflect.Int:        Int,
-	reflect.Int8:       Int8,
-	reflect.Int16:      Int16,
-	reflect.Int32:      Int32,
-	reflect.Int64:      Int64,
-	reflect.Uint:       Uint,
-	reflect.Uint8:      Uint8,
-	reflect.Uint16:     Uint16,
-	reflect.Uint32:     Uint32,
-	reflect.Uint64:     Uint64,
-	reflect.Float32:    Float32,
-	reflect.Float64:    Float64,
-	reflect.Complex64:  Complex64,
-	reflect.Complex128: Complex128,
-}
-
-var categories = map[string]Provider{
-	"MaleName":   MaleName,
-	"LastName":   LastName,
-	"FemaleName": FemaleName,
-}
-
-func NewLorem(opts ...Options) *Lorem {
+func New(opts ...Options) *Lorem {
 	var options Options
 	if len(opts) > 0 {
 		options = opts[0]
@@ -112,51 +83,53 @@ func (l Lorem) Fake(source any) error {
 }
 
 func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
-	switch kind := element.Kind(); kind {
+
+	var kind LoremType
+	switch element.Type().String() {
+	case "time.Time":
+		kind = TypeTime
+	default:
+		kind = LoremType(element.Kind())
+	}
+
+	switch kind {
 
 	// primitive cases are the types that can't be broken down anymore.
-	case reflect.Bool:
-		fallthrough
+	case
+		TypeBool,
+		TypeInt, TypeInt8, TypeInt16, TypeInt32, TypeInt64,
+		TypeUint, TypeUint8, TypeUint16, TypeUint32, TypeUint64,
+		TypeFloat32, TypeFloat64,
+		TypeComplex64, TypeComplex128,
+		TypeTime,
+		TypeString:
 
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		fallthrough
-
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		fallthrough
-
-	case reflect.Float32, reflect.Float64:
-		fallthrough
-
-	case reflect.Complex64, reflect.Complex128:
-		fallthrough
-
-	case reflect.String:
 		value := l.primitives[kind](l.rand)
 		return reflect.ValueOf(value), nil
 
 		// collection cases get recursed into until the reach the primitive case.
-	case reflect.Pointer:
-		return l._pointer(element)
+	case TypePointer:
+		return l.handlePointer(element)
 
-	case reflect.Map:
-		return l._map(element)
+	case TypeMap:
+		return l.handleMap(element)
 
-	case reflect.Slice:
-		return l._slice(element)
+	case TypeSlice:
+		return l.handleSlice(element)
 
-	case reflect.Array:
-		return l._array(element)
+	case TypeArray:
+		return l.handleArray(element)
 
-	case reflect.Struct:
-		return l._struct(element)
+	case TypeStruct:
+		return l.handleStruct(element)
 
 	default:
-		return reflect.Value{}, fmt.Errorf("unsupported field kind: %s", kind)
+		return reflect.Value{}, fmt.Errorf("unsupported field kind: %d", kind)
 
 	}
 }
 
-func (l *Lorem) _pointer(element reflect.Value) (reflect.Value, error) {
+func (l *Lorem) handlePointer(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
 	// subItem is the type the value points to i.e. if the pointer is a
 	// *string then the subItem would be a string
@@ -172,7 +145,7 @@ func (l *Lorem) _pointer(element reflect.Value) (reflect.Value, error) {
 	return pointer, nil
 }
 
-func (l *Lorem) _map(element reflect.Value) (reflect.Value, error) {
+func (l *Lorem) handleMap(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
 	newMap := reflect.MakeMap(elementType)
 	for i := 0; i < l.mapLen; i++ {
@@ -198,7 +171,7 @@ func (l *Lorem) _map(element reflect.Value) (reflect.Value, error) {
 	return newMap, nil
 }
 
-func (l *Lorem) _slice(element reflect.Value) (reflect.Value, error) {
+func (l *Lorem) handleSlice(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
 	newSlice := reflect.MakeSlice(elementType, l.sliceLen, l.sliceLen)
 	itemType := newSlice.Index(0).Type()
@@ -215,7 +188,7 @@ func (l *Lorem) _slice(element reflect.Value) (reflect.Value, error) {
 	return newSlice, nil
 }
 
-func (l *Lorem) _array(element reflect.Value) (reflect.Value, error) {
+func (l *Lorem) handleArray(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
 	newArray := reflect.New(elementType).Elem()
 	itemType := newArray.Index(0).Type()
@@ -233,7 +206,7 @@ func (l *Lorem) _array(element reflect.Value) (reflect.Value, error) {
 	return newArray, nil
 }
 
-func (l *Lorem) _struct(element reflect.Value) (reflect.Value, error) {
+func (l *Lorem) handleStruct(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
 	newStruct := reflect.New(elementType).Elem()
 
@@ -243,7 +216,7 @@ func (l *Lorem) _struct(element reflect.Value) (reflect.Value, error) {
 			continue
 		}
 
-		tag := elementType.Field(i).Tag.Get(TAG)
+		tag := elementType.Field(i).Tag.Get("lorem")
 		var (
 			err   error
 			value reflect.Value

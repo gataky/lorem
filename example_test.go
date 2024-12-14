@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/gataky/lorem"
@@ -20,6 +21,7 @@ type SubStruct struct {
 }
 
 type S struct {
+	Time    time.Time
 	Pointer *int
 	Custom  Number
 	String  string `lorem:"LastName"`
@@ -62,11 +64,10 @@ func Test_Example(t *testing.T) {
 	// Some options to control the generated types
 	o := lorem.Options{
 		// Seed so we can have reproducible generations.
-		Seed:     1,
 		SliceLen: 10, // The len of slices
 		MapLen:   3,  // the len of maps
 	}
-	l := lorem.NewLorem(o)
+	l := lorem.New(o)
 
 	// Register the providers for the tags specified on the struct.
 	l.RegisterProvider("providerFunc", funcProvider)
@@ -75,7 +76,6 @@ func Test_Example(t *testing.T) {
 	st := S{}
 	l.Fake(&st)
 	spew.Dump(st)
-	fmt.Println("=============================")
 
 	// The func will return the function that we used from our custom method.
 	st.Func() // -> "hi from the fake func"
