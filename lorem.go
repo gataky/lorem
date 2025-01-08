@@ -26,6 +26,8 @@ type Lorem struct {
 	categories map[string]Provider
 	providers  map[string]Provider
 
+	initializedFromStruct bool
+
 	sliceLen int
 	arrayLen int
 	mapLen   int
@@ -73,6 +75,13 @@ func (l Lorem) Fake(source any) error {
 
 	element := valueOfSource.Elem()
 
+	// We want to know if we initially started off with a struct of something else.  This is used
+	// by slice and map to decided how many elements a slice contains.  If from a struct
+	// we'll use what's provided by the options otherwise we'll use the len specified when making.
+	if LoremType(element.Kind()) == TypeStruct {
+		l.initializedFromStruct = true
+	}
+
 	fakeValue, err := l.fakeIt(element)
 	if err != nil {
 		return err
@@ -101,8 +110,8 @@ func (l *Lorem) fakeIt(element reflect.Value) (reflect.Value, error) {
 		TypeUint, TypeUint8, TypeUint16, TypeUint32, TypeUint64,
 		TypeFloat32, TypeFloat64,
 		TypeComplex64, TypeComplex128,
-		TypeTime,
-		TypeString:
+		TypeString,
+		TypeTime:
 
 		value := l.primitives[kind](l.rand)
 		return reflect.ValueOf(value), nil
@@ -148,7 +157,10 @@ func (l *Lorem) handlePointer(element reflect.Value) (reflect.Value, error) {
 func (l *Lorem) handleMap(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
 	newMap := reflect.MakeMap(elementType)
-	for i := 0; i < l.mapLen; i++ {
+
+	length := l.mapLen
+
+	for i := 0; i < length; i++ {
 
 		key, err := l.fakeIt(reflect.New(elementType.Key()).Elem())
 		if err != nil {
@@ -173,10 +185,18 @@ func (l *Lorem) handleMap(element reflect.Value) (reflect.Value, error) {
 
 func (l *Lorem) handleSlice(element reflect.Value) (reflect.Value, error) {
 	elementType := element.Type()
-	newSlice := reflect.MakeSlice(elementType, l.sliceLen, l.sliceLen)
+
+	length := l.sliceLen
+	capacity := l.sliceLen
+	if l.initializedFromStruct == false {
+		length = element.Len()
+		capacity = element.Cap()
+	}
+
+	newSlice := reflect.MakeSlice(elementType, length, capacity)
 	itemType := newSlice.Index(0).Type()
 
-	for i := 0; i < l.sliceLen; i++ {
+	for i := 0; i < length; i++ {
 		value, err := l.fakeIt(newSlice.Index(i))
 		if err != nil {
 			return reflect.Value{}, err
@@ -247,18 +267,4 @@ func (l *Lorem) handleStruct(element reflect.Value) (reflect.Value, error) {
 		field.Set(value.Convert(field.Type()))
 	}
 	return newStruct, nil
-}
-
-func inspect(v reflect.Value) {
-	fmt.Println("===========================================================")
-	fmt.Println("        v          ", v)
-	fmt.Println("        v.interface", v.Interface())
-	fmt.Println("        v.elem     ", v.Elem())
-	fmt.Println("        v.kind     ", v.Kind())
-	fmt.Println("        v.type     ", v.Type())
-	fmt.Println("        v.type.elem", v.Type().Elem())
-	fmt.Println("valueof v.type.elem", reflect.ValueOf(v.Type().Elem()))
-	fmt.Println("        v.isvalid  ", v.IsValid())
-	fmt.Println("        v.iszero   ", v.IsZero())
-	fmt.Println("===========================================================")
 }

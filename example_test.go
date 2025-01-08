@@ -21,6 +21,7 @@ type SubStruct struct {
 }
 
 type S struct {
+	Any     any
 	Time    time.Time
 	Pointer *int
 	Custom  Number
@@ -63,7 +64,7 @@ func fake() {
 func Test_Example(t *testing.T) {
 	// Some options to control the generated types
 	o := lorem.Options{
-		// Seed so we can have reproducible generations.
+		Seed:     123,
 		SliceLen: 10, // The len of slices
 		MapLen:   3,  // the len of maps
 	}
@@ -78,7 +79,7 @@ func Test_Example(t *testing.T) {
 	spew.Dump(st)
 
 	// The func will return the function that we used from our custom method.
-	st.Func() // -> "hi from the fake func"
+	// st.Func() // -> "hi from the fake func"
 
 	t.Fail()
 }
