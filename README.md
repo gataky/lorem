@@ -10,7 +10,7 @@ This project was inspired by (faker)[https://github.com/go-faker/faker] which wa
 
 Lorem is defaulted with the following options
 
-```
+```go
 var defaultOptions = Options{
 	Seed:     time.Now().UnixNano(),
 	SliceLen: 3,
@@ -24,7 +24,7 @@ var defaultOptions = Options{
 
 You can specify your own options by passing in a new `lorem.Options` struct with the values you want to `lorem.New`
 
-```
+```go
 myOptions := lorem.Options{
     Seed: 123,
     SliceLen: 10,
@@ -36,7 +36,7 @@ myOptions := lorem.Options{
 
 To use lorem, you'll need to create a new lorem.  You can use lorem without any options which will use the default options or pass in your custom options.
 
-```
+```go
 // Default options
 l := lorem.New()
 
@@ -48,7 +48,7 @@ l := lorem.New(myOptions)
 
 To generate fake data you must pass a pointer of the element to `Fake`.
 
-```
+```go
 test := 0
 l.Fake(&test)
 ```
@@ -57,7 +57,7 @@ l.Fake(&test)
 
 To generate a slice created with make, the length specified with make will be used over the options length. For example, if we have a slice with 5 elements and we pass to `Fake`.
 
-```
+```go
 mySlice = make([]string, 5, 6)
 l := lorem.New()
 l.Fake(&mySlice)
@@ -65,7 +65,7 @@ l.Fake(&mySlice)
 
 The slice will have 5 random values and a capacity of 6.  However, slices specified in a struct use the options `SliceLen`.
 
-```
+```go
 type S struct {
     slice []string
 }
@@ -84,7 +84,7 @@ Custom types like `var MyInt int`, will recursively dive down to the primitive t
 
 This is perhaps the most useful case, recursively generating a struct and fields within it.
 
-```
+```go
 type Number int
 
 type S struct {
@@ -113,7 +113,7 @@ spew.Dump(s)
 
 Which will produce the following struct
 
-```
+```go
 (lorem_test.S) {
  Time: (time.Time) 2012-07-17 08:38:09 +0000 UTC,
  Pointer: (*int)(0x14000104230)(241876450138978746),
@@ -152,7 +152,7 @@ To tell the generator to ignore a field on a struct you can use `lorem:"-"` for 
 
 Lorem comes with some predefined providers which can be specified through tags to control the values a field will generate.  For example,
 
-```
+```go
 type S struct {
 	String  string `lorem:"LastName"`
 }
@@ -160,7 +160,7 @@ type S struct {
 
 produces
 
-```
+```go
 lorem_test.S) {
  String: (string) (len=9) "Rodriguez"
 }
@@ -172,7 +172,7 @@ The stock providers are currently limited and will expand over time.  The easies
 
 To use your own provider you can create a function that accepts a `*rand.Rand` argument and returns `any` and register that provider with lorem with a name that will be used in a tag
 
-```
+```go
 type S struct {
 	Slice []any `lorem:"myFakeSlice"`
 }
