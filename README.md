@@ -1,8 +1,8 @@
 # Lorem
 
-Lorem will generate fake data for your primitive variables (int, float, string, ...) and collections (map, slice, array, structs).  You can also fake custom types and pointers.  Lorem has a very simple tag system allowing for custom provider registration.
+Lorem generates fake data for primitive variables (e.g., int, float, string) and collections (e.g., map, slice, array, structs). It also supports faking custom types and pointers. Lorem features a simple tagging system that allows for custom provider registration.
 
-This project was inspired by (faker)[https://github.com/go-faker/faker] which was very useful to me but I really wanted a way of having reproducible random generations and there wasn't an easy way of achieving that with faker from what I could see.
+This project was inspired by (faker)[https://github.com/go-faker/faker], which I found very useful. However, I wanted a way to produce reproducible random generations, and achieving that with faker wasn't straightforward based on my experience.
 
 # Usage
 
@@ -22,7 +22,7 @@ var defaultOptions = Options{
 * SliceLen: specifies the number of elements a slice will have.
 * MapLen: specifies the number of elements a map will have.
 
-You can specify your own options by passing in a new `lorem.Options` struct with the values you want to `lorem.New`
+You can override these defaults by passing a custom `lorem.Options` struct to `lorem.New`:
 
 ```go
 myOptions := lorem.Options{
@@ -34,7 +34,7 @@ myOptions := lorem.Options{
 
 ## Lorem
 
-To use lorem, you'll need to create a new lorem.  You can use lorem without any options which will use the default options or pass in your custom options.
+To use Lorem, create a new instance. You can use the default options or provide your custom options.
 
 ```go
 // Default options
@@ -46,7 +46,7 @@ l := lorem.New(myOptions)
 
 ## Generating Fake Data
 
-To generate fake data you must pass a pointer of the element to `Fake`.
+To generate fake data, pass a pointer to the element you want to fake to the `Fake` method:
 
 ```go
 test := 0
@@ -76,13 +76,13 @@ l.Fake(&mySlice)
 
 This will create a slice with 3 element.
 
-## Custom Type
+## Custom Types
 
-Custom types like `var MyInt int`, will recursively dive down to the primitive type. So in the end an int will be assigned.
+Custom types, such as `var MyInt int`, will be processed down to their primitive type. For example, an `int` will be assigned.
 
 ## Struct
 
-This is perhaps the most useful case, recursively generating a struct and fields within it.
+Lorem can recursively generate fake data for structs and their fields:
 
 ```go
 type Number int
@@ -111,7 +111,7 @@ l.Fake(s)
 spew.Dump(s)
 ```
 
-Which will produce the following struct
+This will produce the following output
 
 ```go
 (lorem_test.S) {
@@ -144,13 +144,11 @@ Which will produce the following struct
 
 ## Tags
 
-A simple tag system exists to control the behavior of generating fields.
+A simple tag system controls how fields are generated. To ignore a field, use the lorem:"-" tag.
 
-To tell the generator to ignore a field on a struct you can use `lorem:"-"` for that field
+### Predefined Providers
 
-### Stock providers
-
-Lorem comes with some predefined providers which can be specified through tags to control the values a field will generate.  For example,
+Lorem includes several predefined providers, which can be specified via tags to control the values generated. For example:
 
 ```go
 type S struct {
@@ -166,11 +164,11 @@ lorem_test.S) {
 }
 ```
 
-The stock providers are currently limited and will expand over time.  The easiest way to see what's available is to look in the `mappings.go` file. The `categories` file will have the list of available providers.
+Check the `mappings.go` file for a list of available providers.
 
 ### Custom providers
 
-To use your own provider you can create a function that accepts a `*rand.Rand` argument and returns `any` and register that provider with lorem with a name that will be used in a tag
+You can register custom providers by creating a function that accepts a `*rand.Rand` argument and returns `any`. Register this function with Lorem using a unique name:
 
 ```go
 type S struct {
@@ -191,12 +189,12 @@ l := lorem.New()
 l.RegisterProvider("myFakeSlice", myFakeSliceProvider)
 ```
 
-This is useful when you and specific types a field should be or when you have a field that's of type `any` or `interface{}` because lorem will ignore any field that's unknown.  If you don't know what it is how can lorem? So you have to control it.
+This is particularly useful for fields of type `any` or `interface{}`, which Lorem cannot process without additional information.
 
 ### Future Tags
 
-Tags will probably expand to handle more complex cases.
+Tags may expand to handle more complex cases in future versions.
 
 # Example
 
-To see a full working example checkout `example_test.go` There you'll find all the features described here.
+For a full working example, check out `example_test.go`. This file demonstrates all the features described here.
